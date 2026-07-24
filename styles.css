@@ -1,0 +1,209 @@
+/* ──────────────────────────────────────────────────────────
+   MD2Resume — Preview pane shell
+   ────────────────────────────────────────────────────────── */
+
+.md2resume-view {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	background: var(--background-primary);
+}
+
+.md2resume-toolbar {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 12px;
+	border-bottom: 1px solid var(--background-modifier-border);
+	flex-shrink: 0;
+}
+
+.md2resume-print-btn {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border: none;
+	border-radius: 4px;
+	padding: 5px 14px;
+	font-size: 0.875em;
+	cursor: pointer;
+}
+
+.md2resume-print-btn:hover {
+	background: var(--interactive-accent-hover);
+}
+
+/* "Light table" background — pages appear as white cards */
+.md2resume-frame {
+	flex: 1;
+	overflow-y: auto;
+	background: #555;
+	padding: 24px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 20px;
+}
+
+/* ──────────────────────────────────────────────────────────
+   Individual page card (set by JS pagination)
+   ────────────────────────────────────────────────────────── */
+
+.resume-page {
+	background: #fff;
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+	flex-shrink: 0;
+	overflow: hidden;
+	box-sizing: border-box;
+	color: #000;
+}
+
+/* ──────────────────────────────────────────────────────────
+   Resume content (used inside .resume-page and for print)
+   ────────────────────────────────────────────────────────── */
+
+.resume-root {
+	font-family: var(--resume-font-family, 'Times New Roman', Times, serif);
+	font-size: var(--resume-font-size, 10pt);
+	color: #000;
+	background: #fff;
+	line-height: 1;
+}
+
+/* Contact Header */
+.resume-header {
+	text-align: center;
+	margin-bottom: 10px;
+}
+
+.resume-name {
+	font-size: 1.7em;
+	font-weight: bold;
+	margin: 0 0 2px;
+	letter-spacing: 0.03em;
+}
+
+.resume-contact {
+	font-size: 0.9em;
+	margin: 0;
+	color: #333;
+}
+
+.resume-header-label {
+	font-size: 0.85em;
+	letter-spacing: 0.04em;
+	margin: 4px 0 2px;
+}
+
+.contact-link {
+	color: inherit;
+	text-decoration: none;
+}
+
+.contact-link:hover {
+	text-decoration: underline;
+}
+
+/* Section headings — NO uppercase, follow markdown casing */
+.resume-section {
+	margin-bottom: 10px;
+	break-inside: avoid;
+}
+
+.section-heading {
+	font-size: 1em;
+	font-weight: bold;
+	letter-spacing: 0.02em;
+	margin: 0 0 1px;
+}
+
+.section-rule {
+	border: none;
+	border-top: 1.5px solid #000;
+	margin: 1px 0 5px;
+	width: 100%;
+}
+
+/* Entry */
+.entry {
+	margin-bottom: 6px;
+}
+
+/* ──────────────────────────────────────────────────────────
+   Dot-leader row — auto-scales to full width
+   ────────────────────────────────────────────────────────── */
+
+.entry-header {
+	display: flex;
+	align-items: baseline;
+	width: 100%;
+}
+
+.entry-title {
+	font-weight: bold;
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+.dot-leader {
+	flex: 1 1 auto;
+	min-width: 8px;
+	background-image: radial-gradient(circle, #000 1px, transparent 1px);
+	background-size: 5px 1px;
+	background-repeat: repeat-x;
+	background-position: 0 calc(100% - 2px);
+	margin: 0 4px;
+	height: 1em;
+}
+
+.entry-date {
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+.entry-subtitle-inline {
+	font-weight: normal;
+}
+
+.entry-subtitle {
+	margin: 0 0 2px;
+	font-size: 0.95em;
+}
+
+.entry-subtitle em {
+	font-style: italic;
+}
+
+.entry-bullets {
+	margin: 2px 0 0 0;
+	padding-left: 18px;
+}
+
+.entry-bullets li {
+	margin-bottom: 2px;
+}
+
+/* ──────────────────────────────────────────────────────────
+   Tag list (Certifications / Tools — 3 columns)
+   ────────────────────────────────────────────────────────── */
+
+.tag-list {
+	columns: 3;
+	column-gap: 2em;
+	padding: 0;
+	margin: 0;
+}
+
+.tag-list span {
+	display: block;
+	break-inside: avoid;
+	margin-bottom: 1px;
+}
+
+/* ──────────────────────────────────────────────────────────
+   Print — document opened via shell.openPath() handles its own
+   layout; this block only fires if someone prints the Obsidian
+   window directly (not the intended path).
+   ────────────────────────────────────────────────────────── */
+@media print {
+	.md2resume-toolbar { display: none !important; }
+}

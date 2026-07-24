@@ -1,0 +1,13 @@
+{
+  "fontSize": "11pt",
+  "fontFamily": "'Times New Roman', Times, serif",
+  "pageMargin": "0.6in",
+  "paperSize": "letter",
+  "sectionOrder": [
+    "work-experience",
+    "certifications-and-tools",
+    "personal-projects",
+    "community-experience",
+    "education"
+  ]
+}
