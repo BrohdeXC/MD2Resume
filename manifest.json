@@ -2,7 +2,7 @@
 	"id": "md2resume",
 	"name": "MD2Resume",
 	"version": "1.0.0",
-	"minAppVersion": "1.0.0",
+	"minAppVersion": "1.12.7",
 	"description": "Convert a Markdown resume to a print-ready, modularly ordered PDF.",
 	"author": "Bradin Rohde (BrohdeXC)",
 	"isDesktopOnly": true
