@@ -13,7 +13,7 @@ export class MD2ResumeSettingTab extends PluginSettingTab {
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
-		containerEl.createEl('h2', { text: 'MD2Resume Settings' });
+		new Setting(containerEl).setName('MD2Resume Settings').setHeading();
 
 		new Setting(containerEl)
 			.setName('Font family')

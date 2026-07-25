@@ -1,4 +1,4 @@
-import { Editor, ItemView, MarkdownView, TFile, WorkspaceLeaf } from 'obsidian';
+import { Editor, ItemView, MarkdownView, TFile, WorkspaceLeaf, sanitizeHTMLToDom } from 'obsidian';
 import { parseResume } from './parser';
 import { renderResume } from './renderer';
 import type MD2ResumePlugin from './main';
@@ -14,7 +14,7 @@ const DPI = 96;
 export class ResumePreviewView extends ItemView {
 	plugin: MD2ResumePlugin;
 	private lastFile: TFile | null = null;
-	private renderTimer: ReturnType<typeof setTimeout> | null = null;
+	private renderTimer: number | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: MD2ResumePlugin) {
 		super(leaf);
@@ -50,12 +50,12 @@ export class ResumePreviewView extends ItemView {
 	}
 
 	private scheduleRender(md: string): void {
-		if (this.renderTimer) clearTimeout(this.renderTimer);
-		this.renderTimer = setTimeout(() => { void this.renderFromString(md); }, 150);
+		if (this.renderTimer) window.clearTimeout(this.renderTimer);
+		this.renderTimer = window.setTimeout(() => { void this.renderFromString(md); }, 150);
 	}
 
 	async renderFromString(md: string): Promise<void> {
-		const frame = this.contentEl.querySelector('.md2resume-frame') as HTMLElement | null;
+		const frame = this.contentEl.querySelector<HTMLElement>('.md2resume-frame');
 		if (!frame) return;
 
 		const data = parseResume(md);
@@ -99,7 +99,7 @@ export class ResumePreviewView extends ItemView {
 		const contentH = pageH - 2 * marginPx;
 
 		// Render into an off-screen staging element so we can measure heights
-		const staging = document.createElement('div');
+		const staging = document.body.createEl('div');
 		staging.style.cssText = [
 			'position:absolute',
 			'top:-99999px',
@@ -110,15 +110,14 @@ export class ResumePreviewView extends ItemView {
 			`font-size:${fontSize}`,
 			'line-height:1',
 		].join(';');
-		staging.innerHTML = html;
-		document.body.appendChild(staging);
+		staging.appendChild(sanitizeHTMLToDom(html));
 
 		// Wait one microtask so the browser applies CSS and computes layout
-		await new Promise<void>(resolve => setTimeout(resolve, 0));
+		await new Promise<void>(resolve => window.setTimeout(resolve, 0));
 
-		const resumeRoot = staging.querySelector('.resume-root') as HTMLElement | null;
+		const resumeRoot = staging.querySelector<HTMLElement>('.resume-root');
 		if (!resumeRoot) {
-			document.body.removeChild(staging);
+			staging.remove();
 			return;
 		}
 
@@ -127,9 +126,8 @@ export class ResumePreviewView extends ItemView {
 		// adding each element is its true rendered height including margins.
 		// This prevents the paginaton from undercounting and spilling content
 		// into the bottom padding area.
-		const measureAcc = document.createElement('div');
+		const measureAcc = staging.createEl('div');
 		measureAcc.style.cssText = `width:${contentW}px;font-family:${fontFamily};font-size:${fontSize};line-height:1;overflow:hidden;`;
-		staging.appendChild(measureAcc);
 
 		interface BlockInfo {
 			height: number;
@@ -153,8 +151,8 @@ export class ResumePreviewView extends ItemView {
 			const h2El = sectionEl.querySelector('h2') as HTMLElement | null;
 			const hrEl = sectionEl.querySelector('hr') as HTMLElement | null;
 			const entryEls = Array.from(
-				sectionEl.querySelectorAll(':scope > .entry, :scope > .tag-list')
-			) as HTMLElement[];
+				sectionEl.querySelectorAll<HTMLElement>(':scope > .entry, :scope > .tag-list')
+			);
 
 			if (entryEls.length === 0) {
 				const h0 = measureAcc.offsetHeight;
@@ -171,7 +169,7 @@ export class ResumePreviewView extends ItemView {
 
 			// Build the section in measureAcc and add entries one by one so we
 			// can measure each entry's true contribution (including its margin).
-			const accSec = document.createElement('section');
+			const accSec = createEl('section');
 			accSec.className = 'resume-section';
 			if (h2El) accSec.appendChild(h2El.cloneNode(true));
 			if (hrEl) accSec.appendChild(hrEl.cloneNode(true));
@@ -182,13 +180,11 @@ export class ResumePreviewView extends ItemView {
 			allBlocks.push({
 				height: measureAcc.offsetHeight - h0,
 				render: (pageEl) => {
-					const sec = document.createElement('section');
-					sec.className = 'resume-section';
+					const sec = pageEl.createEl('section', { cls: 'resume-section' });
 					sec.setAttribute('data-id', sectionId);
 					if (h2El) sec.appendChild(h2El.cloneNode(true));
 					if (hrEl) sec.appendChild(hrEl.cloneNode(true));
 					sec.appendChild(firstEntry.cloneNode(true));
-					pageEl.appendChild(sec);
 				},
 			});
 
@@ -200,21 +196,21 @@ export class ResumePreviewView extends ItemView {
 				allBlocks.push({
 					height: measureAcc.offsetHeight - h1,
 					render: (pageEl) => {
-						let sec = Array.from(pageEl.querySelectorAll('section.resume-section'))
-							.find(s => s.getAttribute('data-id') === sectionId) as HTMLElement | null;
-						if (!sec) {
-							sec = document.createElement('section');
-							sec.className = 'resume-section';
+						const existing = Array.from(pageEl.querySelectorAll<HTMLElement>('section.resume-section'))
+							.find(s => s.getAttribute('data-id') === sectionId);
+						if (existing) {
+							existing.appendChild(entry.cloneNode(true));
+						} else {
+							const sec = pageEl.createEl('section', { cls: 'resume-section' });
 							sec.setAttribute('data-id', sectionId);
-							pageEl.appendChild(sec);
+							sec.appendChild(entry.cloneNode(true));
 						}
-						sec.appendChild(entry.cloneNode(true));
 					},
 				});
 			}
 		}
 
-		document.body.removeChild(staging);
+		staging.remove();
 
 		// Greedily fill pages with blocks
 		const pages: BlockInfo[][] = [];
@@ -234,11 +230,10 @@ export class ResumePreviewView extends ItemView {
 		if (currentPage.length > 0) pages.push(currentPage);
 
 		// Build the page cards in the frame
-		frame.innerHTML = '';
+		frame.empty();
 
 		for (const pageBlockList of pages) {
-			const pageEl = document.createElement('div');
-			pageEl.className = 'resume-page resume-root';
+			const pageEl = frame.createEl('div', { cls: 'resume-page resume-root' });
 			pageEl.style.cssText = [
 				`width:${pageW}px`,
 				`height:${pageH}px`,
@@ -254,13 +249,11 @@ export class ResumePreviewView extends ItemView {
 
 			// Content wrapper ensures the bottom padding is preserved by
 			// clipping any tiny margin residuals at exactly contentH.
-			const contentEl = document.createElement('div');
+			const contentEl = pageEl.createEl('div');
 			contentEl.style.cssText = `height:${contentH}px;overflow:hidden;`;
 			for (const block of pageBlockList) {
 				block.render(contentEl);
 			}
-			pageEl.appendChild(contentEl);
-			frame.appendChild(pageEl);
 		}
 	}
 
@@ -285,10 +278,10 @@ export class ResumePreviewView extends ItemView {
 		// frame, then serialize the page divs. The frame does not need to be in
 		// the document — buildPagedPreview's internal staging div handles layout
 		// measurement; the frame only receives the final output.
-		const stagingFrame = document.createElement('div');
+		const stagingFrame = createEl('div');
 		await this.buildPagedPreview(stagingFrame, resumeHtml);
 		const pagesHtml = Array.from(stagingFrame.children)
-			.map(p => (p as HTMLElement).outerHTML)
+			.map(p => p.outerHTML)
 			.join('\n');
 
 		if (!pagesHtml.trim()) {
@@ -324,13 +317,13 @@ ${pagesHtml}
 </html>`;
 
 		try {
-			// eslint-disable-next-line @typescript-eslint/no-require-imports
+			// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-call -- Node.js/Electron APIs are only available via CommonJS require() in Obsidian plugins
 			const fs   = require('fs')   as { writeFileSync: (p: string, d: string | Uint8Array) => void; unlinkSync: (p: string) => void };
-			// eslint-disable-next-line @typescript-eslint/no-require-imports
+			// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-call -- Node.js/Electron APIs are only available via CommonJS require() in Obsidian plugins
 			const path = require('path') as { join: (...a: string[]) => string };
-			// eslint-disable-next-line @typescript-eslint/no-require-imports
+			// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-call -- Node.js/Electron APIs are only available via CommonJS require() in Obsidian plugins
 			const os   = require('os')   as { tmpdir: () => string };
-			// eslint-disable-next-line @typescript-eslint/no-require-imports
+			// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-call -- Node.js/Electron APIs are only available via CommonJS require() in Obsidian plugins
 			const { remote } = require('electron') as {
 				remote: {
 					BrowserWindow: new (opts: object) => {
@@ -355,7 +348,7 @@ ${pagesHtml}
 			try {
 				const pdfData = await new Promise<Uint8Array>((resolve, reject) => {
 					printWin.webContents.on('did-finish-load', () => {
-						setTimeout(() => {
+						window.setTimeout(() => {
 							void printWin.webContents.printToPDF({
 								printBackground: true,
 								pageSize: pdfPageSize,
@@ -402,7 +395,7 @@ ${pagesHtml}
 	}
 
 	async onClose(): Promise<void> {
-		if (this.renderTimer) clearTimeout(this.renderTimer);
+		if (this.renderTimer) window.clearTimeout(this.renderTimer);
 		this.contentEl.empty();
 	}
 }

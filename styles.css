@@ -205,5 +205,5 @@
    window directly (not the intended path).
    ────────────────────────────────────────────────────────── */
 @media print {
-	.md2resume-toolbar { display: none !important; }
+	.md2resume-toolbar { display: none; }
 }

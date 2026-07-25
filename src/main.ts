@@ -25,7 +25,8 @@ export default class MD2ResumePlugin extends Plugin {
 	}
 
 	onunload(): void {
-		this.app.workspace.detachLeavesOfType(VIEW_TYPE_RESUME);
+		// Intentionally left empty — detaching leaves here would reset their
+		// position to the default even if the user moved them elsewhere.
 	}
 
 	async activateView(): Promise<void> {
@@ -34,7 +35,7 @@ export default class MD2ResumePlugin extends Plugin {
 		// Reuse existing leaf if open
 		const existing = workspace.getLeavesOfType(VIEW_TYPE_RESUME);
 		if (existing.length > 0 && existing[0]) {
-			workspace.revealLeaf(existing[0]);
+			await workspace.revealLeaf(existing[0]);
 			return;
 		}
 
@@ -42,7 +43,7 @@ export default class MD2ResumePlugin extends Plugin {
 		let leaf: WorkspaceLeaf | null = workspace.getRightLeaf(false);
 		if (!leaf) leaf = workspace.getLeaf(true);
 		await leaf.setViewState({ type: VIEW_TYPE_RESUME, active: true });
-		workspace.revealLeaf(leaf);
+		await workspace.revealLeaf(leaf);
 	}
 
 	async loadSettings(): Promise<void> {
