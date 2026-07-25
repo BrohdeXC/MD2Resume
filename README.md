@@ -17,17 +17,26 @@ cd ~/VAULT/PATH/.obsidian/plugins/
 git clone https://github.com/BrohdeXC/MD2Resume
 ```
 3. Navigate to the community plugins tab in Obsidian and if you don't have community plugins enabled, do that now
-<img width="1193" height="685" alt="image" src="https://github.com/user-attachments/assets/20cac661-e9b1-4ef1-9ca6-30f02b3c27de" />  
-4. Refresh the plugins and enable
+<img width="1193" height="685" alt="image" src="https://github.com/user-attachments/assets/20cac661-e9b1-4ef1-9ca6-30f02b3c27de" />
+
+4. Refresh the plugins and enable it
 <img width="1198" height="676" alt="image" src="https://github.com/user-attachments/assets/d8077b10-0d14-4270-9ad4-6d4a9cca6146" />
 
 ## Usage
-0. Grab the MD2Resume-Template.md file and move it into your vault
+1. Grab the MD2Resume-Template.md file and move it into your vault, rename it as desired
 ```
-mv ~/VAULT/PATH/.obsidian/plugins/MD2Resume/MD2Resume-Template.md ~/VAULT/PATH/RESUMES/
+mv ~/VAULT/PATH/.obsidian/plugins/MD2Resume/MD2Resume-Template.md ~/VAULT/PATH/RESUMES/YourResume.md
 ```
-1. Navigate to the template file in obsidian, feel free to rename it and make it your own
-2. Press the "Preview Resume" button on the left panel
+2. While looking at your file, press the "Preview Resume" button on the left panel
 <img width="266" height="342" alt="image" src="https://github.com/user-attachments/assets/76ed2014-83a8-443c-8ff1-09b9d74ac21b" />
 
-3. Make that resume!
+3. Make that resume!  
+4. Once you're ready to export, press the "Print / Save to PDF" button above the preview  
+<img width="2152" height="726" alt="image" src="https://github.com/user-attachments/assets/66d4aa3e-e14d-4edf-8d8a-2bc05369ab02" />
+
+5. This button should open a print window in your browser, press "Save" to continue
+<img width="2512" height="1340" alt="image" src="https://github.com/user-attachments/assets/6e5180e7-8c25-443d-8e39-0b5fa0f2fbdf" />
+
+6. Select the destination for the file and give it a name, now you're ready to submit that application!
+<img width="1750" height="1200" alt="image" src="https://github.com/user-attachments/assets/78a26efd-ce61-4f9b-bc3c-9616bb20413b" />
+
