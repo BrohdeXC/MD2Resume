@@ -31,12 +31,9 @@ mv ~/VAULT/PATH/.obsidian/plugins/MD2Resume/MD2Resume-Template.md ~/VAULT/PATH/R
 <img width="266" height="342" alt="image" src="https://github.com/user-attachments/assets/76ed2014-83a8-443c-8ff1-09b9d74ac21b" />
 
 3. Make that resume!  
-4. Once you're ready to export, press the "Print / Save to PDF" button above the preview  
-<img width="2152" height="726" alt="image" src="https://github.com/user-attachments/assets/66d4aa3e-e14d-4edf-8d8a-2bc05369ab02" />
+4. Once you're ready to export, press the "Export as PDF" button above the preview  
+<img width="2030" height="868" alt="image" src="https://github.com/user-attachments/assets/d6fcac9c-d097-4056-a1ba-c114937d1438" />
 
-5. This button should open a print window in your browser, press "Save" to continue
-<img width="2512" height="1340" alt="image" src="https://github.com/user-attachments/assets/6e5180e7-8c25-443d-8e39-0b5fa0f2fbdf" />
-
-6. Select the destination for the file and give it a name, now you're ready to submit that application!
+5. Select the destination for the file and give it a name, now you're ready to submit that application!
 <img width="1750" height="1200" alt="image" src="https://github.com/user-attachments/assets/78a26efd-ce61-4f9b-bc3c-9616bb20413b" />
 
