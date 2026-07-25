@@ -280,32 +280,29 @@ export class ResumePreviewView extends ItemView {
 		const data = parseResume(md);
 		const resumeHtml = renderResume(data, this.plugin.settings);
 		const { paperSize } = this.plugin.settings;
-		const pageSize = PAGE_SIZES[paperSize] ?? PAGE_SIZES['letter']!;
-		const pageW = Math.round(pageSize.w * DPI);
-		const pageH = Math.round(pageSize.h * DPI);
 
-		// Run the exact same pagination as the preview into a hidden staging frame,
-		// then serialize the resulting page divs. The PDF will be pixel-identical
-		// to the preview because it renders the same fixed-size page div HTML.
+		// Run the exact same pagination as the preview into a detached staging
+		// frame, then serialize the page divs. The frame does not need to be in
+		// the document — buildPagedPreview's internal staging div handles layout
+		// measurement; the frame only receives the final output.
 		const stagingFrame = document.createElement('div');
-		stagingFrame.style.cssText = 'position:absolute;top:-99999px;left:0;visibility:hidden;';
-		document.body.appendChild(stagingFrame);
+		await this.buildPagedPreview(stagingFrame, resumeHtml);
+		const pagesHtml = Array.from(stagingFrame.children)
+			.map(p => (p as HTMLElement).outerHTML)
+			.join('\n');
 
-		let pagesHtml = '';
-		try {
-			await this.buildPagedPreview(stagingFrame, resumeHtml);
-			pagesHtml = Array.from(stagingFrame.children)
-				.map(p => (p as HTMLElement).outerHTML)
-				.join('\n');
-		} finally {
-			document.body.removeChild(stagingFrame);
+		if (!pagesHtml.trim()) {
+			console.error('MD2Resume export: pagination produced no pages — aborting');
+			return;
 		}
 
 		const css = this.collectResumeCss();
+		const pdfPageSize = paperSize === 'a4' ? 'A4' : 'Letter';
 
-		// Each .resume-page div is exactly pageW×pageH px — matches one PDF page.
-		// marginType:'none' means Electron adds no extra margins; the div padding
-		// already provides the visual margin.
+		// Each .resume-page div is exactly pageW×pageH px. The @page rule and
+		// break-after:page together ensure each div maps to exactly one PDF page.
+		// marginType:'none' means Electron adds no extra margins; the div's own
+		// padding already provides the visual margin.
 		const doc = `<!DOCTYPE html>
 <html>
 <head>
@@ -314,10 +311,11 @@ export class ResumePreviewView extends ItemView {
 <style>
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; background: white; }
+h1, h2, h3, h4, h5, h6, p, ul, ol, li { margin: 0; padding: 0; }
 ${css}
 .resume-page { box-shadow: none; break-after: page; }
 .resume-page:last-child { break-after: auto; }
-@page { size: ${pageW}px ${pageH}px; margin: 0; }
+@page { margin: 0; }
 </style>
 </head>
 <body>
@@ -352,9 +350,6 @@ ${pagesHtml}
 			const tmpPath = path.join(os.tmpdir(), `md2resume-${Date.now()}.html`);
 			fs.writeFileSync(tmpPath, doc);
 
-			// printToPDF custom page size uses microns
-			const widthMicrons  = Math.round(pageSize.w * 25400);
-			const heightMicrons = Math.round(pageSize.h * 25400);
 			const printWin = new remote.BrowserWindow({ show: false });
 
 			try {
@@ -363,7 +358,7 @@ ${pagesHtml}
 						setTimeout(() => {
 							void printWin.webContents.printToPDF({
 								printBackground: true,
-								pageSize: { width: widthMicrons, height: heightMicrons },
+								pageSize: pdfPageSize,
 								margins: { marginType: 'none' },
 							}).then(resolve, reject);
 						}, 300);
