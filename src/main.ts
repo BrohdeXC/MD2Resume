@@ -15,13 +15,13 @@ export default class MD2ResumePlugin extends Plugin {
 
 		this.registerView(VIEW_TYPE_RESUME, (leaf) => new ResumePreviewView(leaf, this));
 
-		this.addRibbonIcon('file-text', 'Preview Resume', () => {
+		this.addRibbonIcon('file-text', 'Preview resume', () => {
 			void this.activateView();
 		});
 
 		this.addCommand({
 			id: 'preview-resume',
-			name: 'Preview Resume',
+			name: 'Preview resume',
 			callback: () => { void this.activateView(); },
 		});
 

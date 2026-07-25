@@ -22,7 +22,7 @@ export class ResumePreviewView extends ItemView {
 	}
 
 	getViewType(): string { return VIEW_TYPE_RESUME; }
-	getDisplayText(): string { return 'Resume Preview'; }
+	getDisplayText(): string { return 'Resume preview'; }
 	getIcon(): string { return 'file-text'; }
 
 	async onOpen(): Promise<void> {
@@ -99,7 +99,7 @@ export class ResumePreviewView extends ItemView {
 		const contentH = pageH - 2 * marginPx;
 
 		// Render into an off-screen staging element so we can measure heights
-		const staging = document.body.createEl('div');
+		const staging = document.body.createDiv();
 		staging.style.cssText = [
 			'position:absolute',
 			'top:-99999px',
@@ -126,7 +126,7 @@ export class ResumePreviewView extends ItemView {
 		// adding each element is its true rendered height including margins.
 		// This prevents the paginaton from undercounting and spilling content
 		// into the bottom padding area.
-		const measureAcc = staging.createEl('div');
+		const measureAcc = staging.createDiv();
 		measureAcc.style.cssText = `width:${contentW}px;font-family:${fontFamily};font-size:${fontSize};line-height:1;overflow:hidden;`;
 
 		interface BlockInfo {
@@ -233,7 +233,7 @@ export class ResumePreviewView extends ItemView {
 		frame.empty();
 
 		for (const pageBlockList of pages) {
-			const pageEl = frame.createEl('div', { cls: 'resume-page resume-root' });
+			const pageEl = frame.createDiv({ cls: 'resume-page resume-root' });
 			pageEl.style.cssText = [
 				`width:${pageW}px`,
 				`height:${pageH}px`,
@@ -249,7 +249,7 @@ export class ResumePreviewView extends ItemView {
 
 			// Content wrapper ensures the bottom padding is preserved by
 			// clipping any tiny margin residuals at exactly contentH.
-			const contentEl = pageEl.createEl('div');
+			const contentEl = pageEl.createDiv();
 			contentEl.style.cssText = `height:${contentH}px;overflow:hidden;`;
 			for (const block of pageBlockList) {
 				block.render(contentEl);
@@ -278,7 +278,7 @@ export class ResumePreviewView extends ItemView {
 		// frame, then serialize the page divs. The frame does not need to be in
 		// the document — buildPagedPreview's internal staging div handles layout
 		// measurement; the frame only receives the final output.
-		const stagingFrame = createEl('div');
+		const stagingFrame = createDiv();
 		await this.buildPagedPreview(stagingFrame, resumeHtml);
 		const pagesHtml = Array.from(stagingFrame.children)
 			.map(p => p.outerHTML)
@@ -317,13 +317,13 @@ ${pagesHtml}
 </html>`;
 
 		try {
-			// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-call -- Node.js/Electron APIs are only available via CommonJS require() in Obsidian plugins
+			// eslint-disable-next-line @typescript-eslint/no-require-imports -- Node.js/Electron APIs are only available via CommonJS require() in Obsidian plugins
 			const fs   = require('fs')   as { writeFileSync: (p: string, d: string | Uint8Array) => void; unlinkSync: (p: string) => void };
-			// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-call -- Node.js/Electron APIs are only available via CommonJS require() in Obsidian plugins
+			// eslint-disable-next-line @typescript-eslint/no-require-imports -- Node.js/Electron APIs are only available via CommonJS require() in Obsidian plugins
 			const path = require('path') as { join: (...a: string[]) => string };
-			// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-call -- Node.js/Electron APIs are only available via CommonJS require() in Obsidian plugins
+			// eslint-disable-next-line @typescript-eslint/no-require-imports -- Node.js/Electron APIs are only available via CommonJS require() in Obsidian plugins
 			const os   = require('os')   as { tmpdir: () => string };
-			// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-call -- Node.js/Electron APIs are only available via CommonJS require() in Obsidian plugins
+			// eslint-disable-next-line @typescript-eslint/no-require-imports -- Node.js/Electron APIs are only available via CommonJS require() in Obsidian plugins
 			const { remote } = require('electron') as {
 				remote: {
 					BrowserWindow: new (opts: object) => {

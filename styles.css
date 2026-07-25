@@ -125,7 +125,6 @@
 /* Entry */
 .entry {
 	margin-bottom: 6px;
-	break-inside: avoid;
 }
 
 /* ──────────────────────────────────────────────────────────
@@ -187,7 +186,8 @@
    ────────────────────────────────────────────────────────── */
 
 .tag-list {
-	columns: 3;
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
 	column-gap: 2em;
 	padding: 0;
 	margin: 0;
@@ -195,7 +195,6 @@
 
 .tag-list span {
 	display: block;
-	break-inside: avoid;
 	margin-bottom: 1px;
 }
 
