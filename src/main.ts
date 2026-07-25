@@ -25,8 +25,7 @@ export default class MD2ResumePlugin extends Plugin {
 	}
 
 	onunload(): void {
-		// Intentionally left empty — detaching leaves here would reset their
-		// position to the default even if the user moved them elsewhere.
+		this.app.workspace.detachLeavesOfType(VIEW_TYPE_RESUME);
 	}
 
 	async activateView(): Promise<void> {

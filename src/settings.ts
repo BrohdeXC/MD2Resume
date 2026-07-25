@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting } from 'obsidian';
+import { App, PluginSettingTab, Setting, SettingDefinitionItem } from 'obsidian';
 import { MD2ResumeSettings } from './types';
 import type MD2ResumePlugin from './main';
 
@@ -10,10 +10,48 @@ export class MD2ResumeSettingTab extends PluginSettingTab {
 		this.plugin = plugin;
 	}
 
+	getControlValue(key: string): unknown {
+		return this.plugin.settings[key as keyof MD2ResumeSettings];
+	}
+
+	async setControlValue(key: string, value: unknown): Promise<void> {
+		(this.plugin.settings as unknown as Record<string, unknown>)[key] = value;
+		await this.plugin.saveSettings();
+	}
+
+	getSettingDefinitions(): SettingDefinitionItem[] {
+		return [
+			{
+				name: 'Font family',
+				desc: 'CSS font-family for the resume.',
+				control: { type: 'text' as const, key: 'fontFamily' },
+			},
+			{
+				name: 'Font size',
+				desc: 'CSS font size (e.g. 10pt, 11px).',
+				control: { type: 'text' as const, key: 'fontSize' },
+			},
+			{
+				name: 'Page margin',
+				desc: 'Print margin (e.g. 0.6in, 15mm).',
+				control: { type: 'text' as const, key: 'pageMargin' },
+			},
+			{
+				name: 'Paper size',
+				control: {
+					type: 'dropdown' as const,
+					key: 'paperSize',
+					options: { letter: 'US Letter', a4: 'A4' },
+				},
+			},
+		];
+	}
+
+	// Fallback for Obsidian < 1.13.0
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
-		new Setting(containerEl).setName('MD2Resume Settings').setHeading();
+		new Setting(containerEl).setName('Appearance').setHeading();
 
 		new Setting(containerEl)
 			.setName('Font family')
