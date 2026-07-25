@@ -31,7 +31,7 @@ export class ResumePreviewView extends ItemView {
 		contentEl.addClass('md2resume-view');
 
 		const toolbar = contentEl.createDiv('md2resume-toolbar');
-		const printBtn = toolbar.createEl('button', { text: 'Print / Save as PDF', cls: 'md2resume-print-btn' });
+		const printBtn = toolbar.createEl('button', { text: 'Export as PDF', cls: 'md2resume-print-btn' });
 		printBtn.addEventListener('click', () => { void this.openPrintWindow(); });
 
 		contentEl.createDiv('md2resume-frame');
@@ -122,30 +122,113 @@ export class ResumePreviewView extends ItemView {
 			return;
 		}
 
-		// Flatten all direct children of resume-root (header + sections)
-		const blocks = Array.from(resumeRoot.children) as HTMLElement[];
-		const heights = blocks.map(b => b.offsetHeight);
+		// Measurement accumulator with overflow:hidden creates a BFC so every
+		// child's margin-bottom is fully contained — the height delta after
+		// adding each element is its true rendered height including margins.
+		// This prevents the paginaton from undercounting and spilling content
+		// into the bottom padding area.
+		const measureAcc = document.createElement('div');
+		measureAcc.style.cssText = `width:${contentW}px;font-family:${fontFamily};font-size:${fontSize};line-height:1;overflow:hidden;`;
+		staging.appendChild(measureAcc);
+
+		interface BlockInfo {
+			height: number;
+			render: (pageEl: HTMLElement) => void;
+		}
+		const allBlocks: BlockInfo[] = [];
+
+		for (const topChild of Array.from(resumeRoot.children) as HTMLElement[]) {
+			if (!topChild.classList.contains('resume-section')) {
+				const h0 = measureAcc.offsetHeight;
+				measureAcc.appendChild(topChild.cloneNode(true));
+				allBlocks.push({
+					height: measureAcc.offsetHeight - h0,
+					render: (pageEl) => pageEl.appendChild(topChild.cloneNode(true)),
+				});
+				continue;
+			}
+
+			const sectionEl = topChild;
+			const sectionId = sectionEl.getAttribute('data-id') ?? '';
+			const h2El = sectionEl.querySelector('h2') as HTMLElement | null;
+			const hrEl = sectionEl.querySelector('hr') as HTMLElement | null;
+			const entryEls = Array.from(
+				sectionEl.querySelectorAll(':scope > .entry, :scope > .tag-list')
+			) as HTMLElement[];
+
+			if (entryEls.length === 0) {
+				const h0 = measureAcc.offsetHeight;
+				measureAcc.appendChild(sectionEl.cloneNode(true));
+				allBlocks.push({
+					height: measureAcc.offsetHeight - h0,
+					render: (pageEl) => pageEl.appendChild(sectionEl.cloneNode(true)),
+				});
+				continue;
+			}
+
+			const firstEntry = entryEls[0];
+			if (!firstEntry) continue;
+
+			// Build the section in measureAcc and add entries one by one so we
+			// can measure each entry's true contribution (including its margin).
+			const accSec = document.createElement('section');
+			accSec.className = 'resume-section';
+			if (h2El) accSec.appendChild(h2El.cloneNode(true));
+			if (hrEl) accSec.appendChild(hrEl.cloneNode(true));
+			accSec.appendChild(firstEntry.cloneNode(true));
+
+			const h0 = measureAcc.offsetHeight;
+			measureAcc.appendChild(accSec);
+			allBlocks.push({
+				height: measureAcc.offsetHeight - h0,
+				render: (pageEl) => {
+					const sec = document.createElement('section');
+					sec.className = 'resume-section';
+					sec.setAttribute('data-id', sectionId);
+					if (h2El) sec.appendChild(h2El.cloneNode(true));
+					if (hrEl) sec.appendChild(hrEl.cloneNode(true));
+					sec.appendChild(firstEntry.cloneNode(true));
+					pageEl.appendChild(sec);
+				},
+			});
+
+			for (let i = 1; i < entryEls.length; i++) {
+				const entry = entryEls[i];
+				if (!entry) continue;
+				const h1 = measureAcc.offsetHeight;
+				accSec.appendChild(entry.cloneNode(true));
+				allBlocks.push({
+					height: measureAcc.offsetHeight - h1,
+					render: (pageEl) => {
+						let sec = Array.from(pageEl.querySelectorAll('section.resume-section'))
+							.find(s => s.getAttribute('data-id') === sectionId) as HTMLElement | null;
+						if (!sec) {
+							sec = document.createElement('section');
+							sec.className = 'resume-section';
+							sec.setAttribute('data-id', sectionId);
+							pageEl.appendChild(sec);
+						}
+						sec.appendChild(entry.cloneNode(true));
+					},
+				});
+			}
+		}
 
 		document.body.removeChild(staging);
 
 		// Greedily fill pages with blocks
-		type Page = HTMLElement[];
-		const pages: Page[] = [];
-		let currentPage: Page = [];
+		const pages: BlockInfo[][] = [];
+		let currentPage: BlockInfo[] = [];
 		let usedH = 0;
 
-		for (let i = 0; i < blocks.length; i++) {
-			const bH = heights[i] ?? 0;
-			const block = blocks[i];
-			if (!block) continue;
-
-			if (usedH + bH > contentH && currentPage.length > 0) {
+		for (const block of allBlocks) {
+			if (usedH + block.height > contentH && currentPage.length > 0) {
 				pages.push(currentPage);
 				currentPage = [block];
-				usedH = bH;
+				usedH = block.height;
 			} else {
 				currentPage.push(block);
-				usedH += bH;
+				usedH += block.height;
 			}
 		}
 		if (currentPage.length > 0) pages.push(currentPage);
@@ -153,7 +236,7 @@ export class ResumePreviewView extends ItemView {
 		// Build the page cards in the frame
 		frame.innerHTML = '';
 
-		for (const pageBlocks of pages) {
+		for (const pageBlockList of pages) {
 			const pageEl = document.createElement('div');
 			pageEl.className = 'resume-page resume-root';
 			pageEl.style.cssText = [
@@ -163,24 +246,27 @@ export class ResumePreviewView extends ItemView {
 				`font-size:${fontSize}`,
 				`font-family:${fontFamily}`,
 				'line-height:1',
-				// Re-apply CSS custom properties so child rules still resolve
 				`--resume-font-size:${fontSize}`,
 				`--resume-font-family:${fontFamily}`,
 				`--resume-margin:${pageMargin}`,
 				`--resume-paper-size:${paperSize}`,
 			].join(';');
 
-			for (const block of pageBlocks) {
-				pageEl.appendChild(block.cloneNode(true));
+			// Content wrapper ensures the bottom padding is preserved by
+			// clipping any tiny margin residuals at exactly contentH.
+			const contentEl = document.createElement('div');
+			contentEl.style.cssText = `height:${contentH}px;overflow:hidden;`;
+			for (const block of pageBlockList) {
+				block.render(contentEl);
 			}
+			pageEl.appendChild(contentEl);
 			frame.appendChild(pageEl);
 		}
 	}
 
-	// ── Print / Export ──────────────────────────────────────
+	// ── Export ──────────────────────────────────────────────
 
 	private async openPrintWindow(): Promise<void> {
-		// Re-render from source to get the full un-paginated HTML
 		let md = '';
 		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
 		if (activeView) {
@@ -193,9 +279,33 @@ export class ResumePreviewView extends ItemView {
 
 		const data = parseResume(md);
 		const resumeHtml = renderResume(data, this.plugin.settings);
-		const css = this.collectResumeCss();
-		const { pageMargin, paperSize } = this.plugin.settings;
+		const { paperSize } = this.plugin.settings;
+		const pageSize = PAGE_SIZES[paperSize] ?? PAGE_SIZES['letter']!;
+		const pageW = Math.round(pageSize.w * DPI);
+		const pageH = Math.round(pageSize.h * DPI);
 
+		// Run the exact same pagination as the preview into a hidden staging frame,
+		// then serialize the resulting page divs. The PDF will be pixel-identical
+		// to the preview because it renders the same fixed-size page div HTML.
+		const stagingFrame = document.createElement('div');
+		stagingFrame.style.cssText = 'position:absolute;top:-99999px;left:0;visibility:hidden;';
+		document.body.appendChild(stagingFrame);
+
+		let pagesHtml = '';
+		try {
+			await this.buildPagedPreview(stagingFrame, resumeHtml);
+			pagesHtml = Array.from(stagingFrame.children)
+				.map(p => (p as HTMLElement).outerHTML)
+				.join('\n');
+		} finally {
+			document.body.removeChild(stagingFrame);
+		}
+
+		const css = this.collectResumeCss();
+
+		// Each .resume-page div is exactly pageW×pageH px — matches one PDF page.
+		// marginType:'none' means Electron adds no extra margins; the div padding
+		// already provides the visual margin.
 		const doc = `<!DOCTYPE html>
 <html>
 <head>
@@ -205,48 +315,77 @@ export class ResumePreviewView extends ItemView {
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; background: white; }
 ${css}
-.resume-root {
-  padding: ${pageMargin};
-  max-width: none;
-  box-shadow: none;
-  margin: 0;
-}
-@media print {
-  @page { size: ${paperSize}; margin: 0; }
-}
+.resume-page { box-shadow: none; break-after: page; }
+.resume-page:last-child { break-after: auto; }
+@page { size: ${pageW}px ${pageH}px; margin: 0; }
 </style>
 </head>
 <body>
-${resumeHtml}
-<script>
-window.addEventListener('load', function() {
-  setTimeout(function() { window.print(); }, 300);
-});
-</script>
+${pagesHtml}
 </body>
 </html>`;
 
-		// Blob URLs fail in Electron (ERR_FILE_NOT_FOUND) because they are
-		// origin-scoped to the renderer that created them and can't be opened
-		// in a new BrowserWindow. Write to a temp file and open via shell.
 		try {
 			// eslint-disable-next-line @typescript-eslint/no-require-imports
-			const fs    = require('fs')   as { writeFileSync: (p: string, d: string, enc: string) => void; unlinkSync: (p: string) => void };
+			const fs   = require('fs')   as { writeFileSync: (p: string, d: string | Uint8Array) => void; unlinkSync: (p: string) => void };
 			// eslint-disable-next-line @typescript-eslint/no-require-imports
-			const path  = require('path') as { join: (...a: string[]) => string };
+			const path = require('path') as { join: (...a: string[]) => string };
 			// eslint-disable-next-line @typescript-eslint/no-require-imports
-			const os    = require('os')   as { tmpdir: () => string };
+			const os   = require('os')   as { tmpdir: () => string };
 			// eslint-disable-next-line @typescript-eslint/no-require-imports
-			const { shell } = require('electron') as { shell: { openPath: (p: string) => Promise<string> } };
+			const { remote } = require('electron') as {
+				remote: {
+					BrowserWindow: new (opts: object) => {
+						loadURL: (url: string) => void;
+						close: () => void;
+						webContents: {
+							on: (event: string, cb: () => void) => void;
+							printToPDF: (opts: object) => Promise<Uint8Array>;
+						};
+					};
+					dialog: {
+						showSaveDialog: (opts: object) => Promise<{ canceled: boolean; filePath?: string }>;
+					};
+				};
+			};
 
 			const tmpPath = path.join(os.tmpdir(), `md2resume-${Date.now()}.html`);
-			fs.writeFileSync(tmpPath, doc, 'utf-8');
-			await shell.openPath(tmpPath);
+			fs.writeFileSync(tmpPath, doc);
 
-			// Clean up after the user has had time to print
-			setTimeout(() => { try { fs.unlinkSync(tmpPath); } catch { /* ignore */ } }, 120_000);
+			// printToPDF custom page size uses microns
+			const widthMicrons  = Math.round(pageSize.w * 25400);
+			const heightMicrons = Math.round(pageSize.h * 25400);
+			const printWin = new remote.BrowserWindow({ show: false });
+
+			try {
+				const pdfData = await new Promise<Uint8Array>((resolve, reject) => {
+					printWin.webContents.on('did-finish-load', () => {
+						setTimeout(() => {
+							void printWin.webContents.printToPDF({
+								printBackground: true,
+								pageSize: { width: widthMicrons, height: heightMicrons },
+								margins: { marginType: 'none' },
+							}).then(resolve, reject);
+						}, 300);
+					});
+					printWin.loadURL(`file://${tmpPath}`);
+				});
+
+				const result = await remote.dialog.showSaveDialog({
+					title: 'Save Resume as PDF',
+					defaultPath: 'resume.pdf',
+					filters: [{ name: 'PDF', extensions: ['pdf'] }],
+				});
+
+				if (!result.canceled && result.filePath) {
+					fs.writeFileSync(result.filePath, pdfData);
+				}
+			} finally {
+				try { printWin.close(); } catch { /* ignore */ }
+				try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
+			}
 		} catch (err) {
-			console.error('MD2Resume: failed to open print window', err);
+			console.error('MD2Resume: failed to export PDF', err);
 		}
 	}
 
