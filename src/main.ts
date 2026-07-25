@@ -9,6 +9,10 @@ export default class MD2ResumePlugin extends Plugin {
 	async onload(): Promise<void> {
 		await this.loadSettings();
 
+		// Detach any leaves left open from a previous plugin instance before
+		// re-registering the view type, so the registry stays consistent on reload.
+		this.app.workspace.getLeavesOfType(VIEW_TYPE_RESUME).forEach(l => l.detach());
+
 		this.registerView(VIEW_TYPE_RESUME, (leaf) => new ResumePreviewView(leaf, this));
 
 		this.addRibbonIcon('file-text', 'Preview Resume', () => {
@@ -24,9 +28,7 @@ export default class MD2ResumePlugin extends Plugin {
 		this.addSettingTab(new MD2ResumeSettingTab(this.app, this));
 	}
 
-	onunload(): void {
-		this.app.workspace.detachLeavesOfType(VIEW_TYPE_RESUME);
-	}
+	onunload(): void {}
 
 	async activateView(): Promise<void> {
 		const { workspace } = this.app;
